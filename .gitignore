@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment & secrets — NEVER commit these
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+private-key*
+secrets/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Test coverage
+coverage/
+
+# TypeScript
+*.tsbuildinfo
