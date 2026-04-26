@@ -1,6 +1,6 @@
 import type { Config } from "../config.js";
-import type { AsaApiResponse } from "./types.js";
 import { AsaAuth } from "./auth.js";
+import type { AsaApiResponse } from "./types.js";
 
 const BASE_URL = "https://api.searchads.apple.com/api/v5";
 
@@ -25,7 +25,10 @@ export class AsaClient {
    * GET with offset-based pagination query params appended to the path.
    * Defaults: limit=20, offset=0.
    */
-  async getPaginated<T>(path: string, pagination: PaginationParams = {}): Promise<AsaApiResponse<T>> {
+  async getPaginated<T>(
+    path: string,
+    pagination: PaginationParams = {}
+  ): Promise<AsaApiResponse<T>> {
     const limit = pagination.limit ?? 20;
     const offset = pagination.offset ?? 0;
     const separator = path.includes("?") ? "&" : "?";

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { decodeJwt, decodeProtectedHeader } from "jose";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AsaAuth } from "../src/asa/auth.js";
 import type { Config } from "../src/config.js";
 
@@ -56,7 +56,8 @@ describe("AsaAuth — JWT claims", () => {
     await auth.getAccessToken();
 
     expect(capturedAssertion).not.toBeNull();
-    const jwt = capturedAssertion!;
+    if (!capturedAssertion) throw new Error("capturedAssertion is null");
+    const jwt = capturedAssertion;
 
     // Verify protected header
     const header = decodeProtectedHeader(jwt);
@@ -69,12 +70,12 @@ describe("AsaAuth — JWT claims", () => {
     expect(payload.sub).toBe(TEST_CONFIG.clientId);
     expect(payload.aud).toBe("https://appleid.apple.com");
     expect(typeof payload.jti).toBe("string");
-    expect(payload.jti!.length).toBeGreaterThan(0);
+    expect(payload.jti?.length).toBeGreaterThan(0);
 
     // exp should be ~3 minutes from iat
     expect(typeof payload.iat).toBe("number");
     expect(typeof payload.exp).toBe("number");
-    const lifetime = payload.exp! - payload.iat!;
+    const lifetime = (payload.exp as number) - (payload.iat as number);
     expect(lifetime).toBeGreaterThanOrEqual(170);
     expect(lifetime).toBeLessThanOrEqual(190);
 
@@ -99,9 +100,9 @@ describe("AsaAuth — JWT claims", () => {
     const auth = new AsaAuth(TEST_CONFIG);
     await auth.getAccessToken();
 
-    expect(capturedBody!.get("grant_type")).toBe("client_credentials");
-    expect(capturedBody!.get("client_id")).toBe(TEST_CONFIG.clientId);
-    expect(capturedBody!.get("scope")).toBe("searchadsorg");
+    expect(capturedBody?.get("grant_type")).toBe("client_credentials");
+    expect(capturedBody?.get("client_id")).toBe(TEST_CONFIG.clientId);
+    expect(capturedBody?.get("scope")).toBe("searchadsorg");
 
     vi.unstubAllGlobals();
   });

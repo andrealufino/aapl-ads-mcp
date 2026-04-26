@@ -1,12 +1,25 @@
-import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import type { AsaClient } from "../asa/client.js";
 import type { AdGroup } from "../asa/types.js";
 
 export const ListAdGroupsInputSchema = z.object({
   campaignId: z.number().int().positive().describe("Campaign ID to list ad groups for"),
-  limit: z.number().int().min(1).max(1000).optional().default(20).describe("Max results to return (1–1000)"),
-  offset: z.number().int().min(0).optional().default(0).describe("Zero-based offset for pagination"),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(1000)
+    .optional()
+    .default(20)
+    .describe("Max results to return (1–1000)"),
+  offset: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .default(0)
+    .describe("Zero-based offset for pagination"),
 });
 
 const MoneySchema = z.object({ amount: z.string(), currency: z.string() }).nullable();
@@ -36,16 +49,27 @@ export function registerAdGroupsTools(server: McpServer, client: AsaClient): voi
     "List ad groups for a given Apple Search Ads campaign.",
     {
       campaignId: z.number().int().positive().describe("Campaign ID to list ad groups for"),
-      limit: z.number().int().min(1).max(1000).optional().describe("Max results to return (1–1000, default 20)"),
-      offset: z.number().int().min(0).optional().describe("Zero-based offset for pagination (default 0)"),
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(1000)
+        .optional()
+        .describe("Max results to return (1–1000, default 20)"),
+      offset: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("Zero-based offset for pagination (default 0)"),
     },
     async (args) => {
       const { campaignId, limit, offset } = ListAdGroupsInputSchema.parse(args);
 
-      const response = await client.getPaginated<AdGroup[]>(
-        `/campaigns/${campaignId}/adgroups`,
-        { limit, offset }
-      );
+      const response = await client.getPaginated<AdGroup[]>(`/campaigns/${campaignId}/adgroups`, {
+        limit,
+        offset,
+      });
       const adGroups = Array.isArray(response.data) ? response.data : [];
 
       const result = {

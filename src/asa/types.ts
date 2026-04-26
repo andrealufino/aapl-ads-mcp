@@ -107,12 +107,16 @@ export type Granularity = "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY";
 export interface ReportRequest {
   startTime: string;
   endTime: string;
-  granularity: Granularity;
+  granularity?: Granularity;
   selector?: {
     conditions?: Array<{
       field: string;
       operator: string;
       values: string[];
+    }>;
+    orderBy?: Array<{
+      field: string;
+      sortOrder: "ASCENDING" | "DESCENDING";
     }>;
     pagination?: {
       offset: number;

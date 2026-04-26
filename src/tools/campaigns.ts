@@ -1,12 +1,25 @@
-import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import type { AsaClient } from "../asa/client.js";
 import type { Campaign } from "../asa/types.js";
 
 export const ListCampaignsInputSchema = z.object({
   status: z.enum(["ENABLED", "PAUSED", "DELETED"]).optional().describe("Filter by campaign status"),
-  limit: z.number().int().min(1).max(1000).optional().default(20).describe("Max results to return (1–1000)"),
-  offset: z.number().int().min(0).optional().default(0).describe("Zero-based offset for pagination"),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(1000)
+    .optional()
+    .default(20)
+    .describe("Max results to return (1–1000)"),
+  offset: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .default(0)
+    .describe("Zero-based offset for pagination"),
 });
 
 const MoneySchema = z.object({ amount: z.string(), currency: z.string() }).nullable();
@@ -39,9 +52,23 @@ export function registerCampaignsTools(server: McpServer, client: AsaClient): vo
     "list_campaigns",
     "List Apple Search Ads campaigns for the configured organization. Optionally filter by status.",
     {
-      status: z.enum(["ENABLED", "PAUSED", "DELETED"]).optional().describe("Filter by campaign status"),
-      limit: z.number().int().min(1).max(1000).optional().describe("Max results to return (1–1000, default 20)"),
-      offset: z.number().int().min(0).optional().describe("Zero-based offset for pagination (default 0)"),
+      status: z
+        .enum(["ENABLED", "PAUSED", "DELETED"])
+        .optional()
+        .describe("Filter by campaign status"),
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(1000)
+        .optional()
+        .describe("Max results to return (1–1000, default 20)"),
+      offset: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("Zero-based offset for pagination (default 0)"),
     },
     async (args) => {
       const { status, limit, offset } = ListCampaignsInputSchema.parse(args);

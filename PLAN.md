@@ -179,8 +179,8 @@ Test-after, pragmatic. Cosa serve davvero:
 ## Status fasi
 
 - [x] Phase 0 — Bootstrap
-- [ ] Phase 1 — Auth
-- [ ] Phase 2 — Tool di struttura
-- [ ] Phase 3 — Report
+- [x] Phase 1 — Auth
+- [x] Phase 2 — Tool di struttura
+- [x] Phase 3 — Report
 - [ ] Phase 4 — Polish
 - [ ] Phase 5 — Launch

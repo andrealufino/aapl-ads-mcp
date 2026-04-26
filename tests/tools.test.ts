@@ -1,7 +1,15 @@
-import { describe, it, expect } from "vitest";
-import { ListCampaignsInputSchema, CampaignOutputSchema } from "../src/tools/campaigns.js";
-import { ListAdGroupsInputSchema, AdGroupOutputSchema } from "../src/tools/ad-groups.js";
-import { ListKeywordsInputSchema, KeywordOutputSchema } from "../src/tools/keywords.js";
+import { describe, expect, it } from "vitest";
+import { AdGroupOutputSchema, ListAdGroupsInputSchema } from "../src/tools/ad-groups.js";
+import { CampaignOutputSchema, ListCampaignsInputSchema } from "../src/tools/campaigns.js";
+import { KeywordOutputSchema, ListKeywordsInputSchema } from "../src/tools/keywords.js";
+import {
+  defaultDateRange,
+  GetAdGroupReportInputSchema,
+  GetCampaignReportInputSchema,
+  GetKeywordReportInputSchema,
+  GetSearchTermsReportInputSchema,
+  validateDateRange,
+} from "../src/tools/reports.js";
 
 // ---------------------------------------------------------------------------
 // Pagination helper
@@ -184,7 +192,12 @@ describe("AdGroupOutputSchema", () => {
 
 describe("ListKeywordsInputSchema", () => {
   it("accepts valid input", () => {
-    const result = ListKeywordsInputSchema.parse({ campaignId: 1, adGroupId: 10, limit: 100, offset: 0 });
+    const result = ListKeywordsInputSchema.parse({
+      campaignId: 1,
+      adGroupId: 10,
+      limit: 100,
+      offset: 0,
+    });
     expect(result).toEqual({ campaignId: 1, adGroupId: 10, limit: 100, offset: 0 });
   });
 
@@ -242,6 +255,170 @@ describe("KeywordOutputSchema", () => {
 
   it("accepts PAUSED and DELETED status values", () => {
     expect(KeywordOutputSchema.parse({ ...validKeyword, status: "PAUSED" }).status).toBe("PAUSED");
-    expect(KeywordOutputSchema.parse({ ...validKeyword, status: "DELETED" }).status).toBe("DELETED");
+    expect(KeywordOutputSchema.parse({ ...validKeyword, status: "DELETED" }).status).toBe(
+      "DELETED"
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateDateRange
+// ---------------------------------------------------------------------------
+
+describe("validateDateRange", () => {
+  it("accepts valid date range", () => {
+    expect(() => validateDateRange("2024-01-01", "2024-01-31")).not.toThrow();
+  });
+
+  it("accepts same start and end date", () => {
+    expect(() => validateDateRange("2024-06-15", "2024-06-15")).not.toThrow();
+  });
+
+  it("throws when startDate is after endDate", () => {
+    expect(() => validateDateRange("2024-02-01", "2024-01-01")).toThrow(
+      /startDate.*must not be after/
+    );
+  });
+
+  it("throws when startDate has wrong format", () => {
+    expect(() => validateDateRange("01/01/2024", "2024-01-31")).toThrow(/YYYY-MM-DD/);
+  });
+
+  it("throws when endDate has wrong format", () => {
+    expect(() => validateDateRange("2024-01-01", "Jan 31 2024")).toThrow(/YYYY-MM-DD/);
+  });
+
+  it("throws when startDate is empty string", () => {
+    expect(() => validateDateRange("", "2024-01-31")).toThrow(/YYYY-MM-DD/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// defaultDateRange
+// ---------------------------------------------------------------------------
+
+describe("defaultDateRange", () => {
+  it("returns YYYY-MM-DD formatted strings", () => {
+    const { startDate, endDate } = defaultDateRange();
+    expect(startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(endDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("returns a range where startDate <= endDate", () => {
+    const { startDate, endDate } = defaultDateRange();
+    expect(startDate <= endDate).toBe(true);
+  });
+
+  it("spans approximately 30 days", () => {
+    const { startDate, endDate } = defaultDateRange();
+    const diffMs = new Date(endDate).getTime() - new Date(startDate).getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    expect(diffDays).toBeCloseTo(30, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GetCampaignReportInputSchema
+// ---------------------------------------------------------------------------
+
+describe("GetCampaignReportInputSchema", () => {
+  it("accepts empty input (all optional)", () => {
+    expect(() => GetCampaignReportInputSchema.parse({})).not.toThrow();
+  });
+
+  it("accepts all fields", () => {
+    const result = GetCampaignReportInputSchema.parse({
+      startDate: "2024-01-01",
+      endDate: "2024-01-31",
+      granularity: "DAILY",
+      campaignIds: [1, 2, 3],
+    });
+    expect(result.granularity).toBe("DAILY");
+    expect(result.campaignIds).toEqual([1, 2, 3]);
+  });
+
+  it("rejects invalid granularity", () => {
+    expect(() => GetCampaignReportInputSchema.parse({ granularity: "YEARLY" })).toThrow();
+  });
+
+  it("rejects non-positive campaignId in array", () => {
+    expect(() => GetCampaignReportInputSchema.parse({ campaignIds: [1, -5] })).toThrow();
+  });
+
+  it("accepts all four granularity values", () => {
+    for (const g of ["HOURLY", "DAILY", "WEEKLY", "MONTHLY"] as const) {
+      expect(() => GetCampaignReportInputSchema.parse({ granularity: g })).not.toThrow();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GetAdGroupReportInputSchema
+// ---------------------------------------------------------------------------
+
+describe("GetAdGroupReportInputSchema", () => {
+  it("accepts minimum valid input", () => {
+    const result = GetAdGroupReportInputSchema.parse({ campaignId: 42 });
+    expect(result.campaignId).toBe(42);
+    expect(result.adGroupIds).toBeUndefined();
+  });
+
+  it("accepts adGroupIds filter", () => {
+    const result = GetAdGroupReportInputSchema.parse({ campaignId: 42, adGroupIds: [10, 20] });
+    expect(result.adGroupIds).toEqual([10, 20]);
+  });
+
+  it("rejects missing campaignId", () => {
+    expect(() => GetAdGroupReportInputSchema.parse({})).toThrow();
+  });
+
+  it("rejects non-positive campaignId", () => {
+    expect(() => GetAdGroupReportInputSchema.parse({ campaignId: 0 })).toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GetKeywordReportInputSchema
+// ---------------------------------------------------------------------------
+
+describe("GetKeywordReportInputSchema", () => {
+  it("accepts valid input", () => {
+    const result = GetKeywordReportInputSchema.parse({ campaignId: 1, adGroupId: 10 });
+    expect(result.campaignId).toBe(1);
+    expect(result.adGroupId).toBe(10);
+  });
+
+  it("rejects missing adGroupId", () => {
+    expect(() => GetKeywordReportInputSchema.parse({ campaignId: 1 })).toThrow();
+  });
+
+  it("rejects missing campaignId", () => {
+    expect(() => GetKeywordReportInputSchema.parse({ adGroupId: 10 })).toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GetSearchTermsReportInputSchema
+// ---------------------------------------------------------------------------
+
+describe("GetSearchTermsReportInputSchema", () => {
+  it("accepts valid input", () => {
+    const result = GetSearchTermsReportInputSchema.parse({ campaignId: 5, adGroupId: 50 });
+    expect(result.campaignId).toBe(5);
+    expect(result.adGroupId).toBe(50);
+  });
+
+  it("rejects missing required fields", () => {
+    expect(() => GetSearchTermsReportInputSchema.parse({})).toThrow();
+    expect(() => GetSearchTermsReportInputSchema.parse({ campaignId: 5 })).toThrow();
+  });
+
+  it("accepts optional granularity", () => {
+    const result = GetSearchTermsReportInputSchema.parse({
+      campaignId: 5,
+      adGroupId: 50,
+      granularity: "MONTHLY",
+    });
+    expect(result.granularity).toBe("MONTHLY");
   });
 });

@@ -1,12 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getConfig } from "./config.js";
 import { AsaClient } from "./asa/client.js";
+import { getConfig } from "./config.js";
 import {
-  registerHealthTool,
-  registerOrgsTools,
-  registerCampaignsTools,
   registerAdGroupsTools,
+  registerCampaignsTools,
+  registerHealthTool,
   registerKeywordsTools,
+  registerOrgsTools,
+  registerReportsTools,
 } from "./tools/index.js";
 
 const SERVER_INFO = {
@@ -24,6 +25,7 @@ export function createServer(): McpServer {
   registerCampaignsTools(server, client);
   registerAdGroupsTools(server, client);
   registerKeywordsTools(server, client);
+  registerReportsTools(server, client);
 
   return server;
 }

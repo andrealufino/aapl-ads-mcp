@@ -75,6 +75,10 @@ Response envelope:
 | `list_campaigns` | `tools/campaigns.ts` | `GET /campaigns` | Yes |
 | `list_ad_groups` | `tools/ad-groups.ts` | `GET /campaigns/:id/adgroups` | Yes |
 | `list_keywords` | `tools/keywords.ts` | `GET /campaigns/:id/adgroups/:id/targetingkeywords` | Yes |
+| `get_campaign_report` | `tools/reports.ts` | `POST /reports/campaigns` | Yes |
+| `get_ad_group_report` | `tools/reports.ts` | `POST /reports/adgroups` | Yes |
+| `get_keyword_report` | `tools/reports.ts` | `POST /reports/keywords` | Yes |
+| `get_search_terms_report` | `tools/reports.ts` | `POST /reports/searchterms` | Yes |
 
 ### Zod schemas per tool
 
@@ -123,6 +127,73 @@ Input schemas are defined twice: inline in `server.tool()` (required by the MCP 
   ]
 }
 ```
+
+## Reports
+
+All four report tools share a common implementation pattern defined in `src/tools/reports.ts`.
+
+### Request shape
+
+Reports use `POST` (not `GET`) to the `/reports/<entity>` endpoints. The body follows the `ReportRequest` type:
+
+```json
+{
+  "startTime": "2024-03-27",
+  "endTime": "2024-04-26",
+  "granularity": "WEEKLY",
+  "returnGrandTotals": true,
+  "returnRowTotals": true,
+  "returnRecordsWithNoMetrics": false,
+  "selector": {
+    "conditions": [
+      { "field": "campaignId", "operator": "EQUALS", "values": ["12345"] }
+    ]
+  }
+}
+```
+
+### Defaults
+
+| Parameter | Default |
+|-----------|---------|
+| `startDate` | today − 30 days |
+| `endDate` | today |
+| `granularity` | `WEEKLY` |
+
+### Date validation
+
+`validateDateRange(startDate, endDate)` (exported, tested) enforces:
+- Both strings must match `YYYY-MM-DD`
+- `startDate <= endDate`
+
+Throws with a descriptive message on violation; the MCP SDK surfaces this as a tool error.
+
+### Nullable-first schema design
+
+ASA report responses omit metric fields for periods with no activity. Every field in `MetricsSchema` and `GranularityRowSchema` is `.nullable().optional()`. `ReportRowSchema.granularity` is also `.nullable().optional()`. This prevents `zod` parse failures on sparse responses.
+
+### Standard metrics
+
+`impressions`, `taps`, `installs`, `newDownloads`, `redownloads`, `latOnInstalls`, `latOffInstalls`, `ttr`, `avgCPT`, `avgCPA`, `spend`, `conversionRate`.
+
+Money fields (`avgCPT`, `avgCPA`, `spend`) are `{ amount: string, currency: string } | null | undefined`.
+
+### Filtering
+
+- `get_campaign_report`: optional `campaignIds[]` → `IN` condition on `campaignId`
+- `get_ad_group_report`: required `campaignId` → `EQUALS`, optional `adGroupIds[]` → `IN`
+- `get_keyword_report`: `campaignId` is in the URL path (`/reports/campaigns/{campaignId}/keywords`) — adding it as a selector condition causes `INVALID_CONDITION_INPUT`. Only `adGroupId` goes in the selector.
+- `get_search_terms_report`: same URL-path rule for `campaignId`. Additionally, ASA does not support `granularity` and `returnRowTotals` together for this endpoint — the `granularity` field is omitted from the request body.
+
+### groupBy
+
+All reports send `groupBy: ["countryOrRegion"]`. This is required for ASA to return the full set of metrics (`installs`, `spend`, `avgCPA`, `conversionRate`). Without it, some metric fields may be absent or null in the response.
+
+### API role and metric availability
+
+The following metrics require at minimum the **API Account Manager** role assigned to the API user in ASA Account Settings. With only **API Campaign Manager**, some fields (e.g. `spend`, `avgCPA`, `conversionRate`) may be absent regardless of `groupBy` or `returnRowTotals` settings.
+
+If metrics are missing after a verified correct request, check the role of the API user in ASA → Account Settings → User Management.
 
 ## Testing Strategy
 
