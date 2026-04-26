@@ -14,30 +14,45 @@ const GranularityEnum = z.enum(["HOURLY", "DAILY", "WEEKLY", "MONTHLY"]);
 const MoneySchema = z.object({ amount: z.string(), currency: z.string() }).nullable().optional();
 
 const MetricsSchema = z.object({
+  // Impressions & engagement
   impressions: z.number().nullable().optional(),
   taps: z.number().nullable().optional(),
-  installs: z.number().nullable().optional(),
-  newDownloads: z.number().nullable().optional(),
-  redownloads: z.number().nullable().optional(),
-  latOnInstalls: z.number().nullable().optional(),
-  latOffInstalls: z.number().nullable().optional(),
   ttr: z.number().nullable().optional(),
+  // Money metrics
   avgCPT: MoneySchema,
-  avgCPA: MoneySchema,
+  avgCPM: MoneySchema,
   localSpend: MoneySchema,
-  conversionRate: z.number().nullable().optional(),
-}).passthrough();
+  // Installs — tap-through, view-through, total
+  tapInstalls: z.number().nullable().optional(),
+  viewInstalls: z.number().nullable().optional(),
+  totalInstalls: z.number().nullable().optional(),
+  // New downloads — tap-through, view-through, total
+  tapNewDownloads: z.number().nullable().optional(),
+  viewNewDownloads: z.number().nullable().optional(),
+  totalNewDownloads: z.number().nullable().optional(),
+  // Redownloads — tap-through, view-through, total
+  tapRedownloads: z.number().nullable().optional(),
+  viewRedownloads: z.number().nullable().optional(),
+  totalRedownloads: z.number().nullable().optional(),
+  // CPI
+  tapInstallCPI: MoneySchema,
+  totalAvgCPI: MoneySchema,
+  // Install rates
+  tapInstallRate: z.number().nullable().optional(),
+  totalInstallRate: z.number().nullable().optional(),
+  // Pre-orders
+  tapPreOrdersPlaced: z.number().nullable().optional(),
+  viewPreOrdersPlaced: z.number().nullable().optional(),
+  totalPreOrdersPlaced: z.number().nullable().optional(),
+});
 
-const GranularityRowSchema = z.object({
-  date: z.string(),
-  metrics: MetricsSchema.optional(),
-}).passthrough();
+const GranularityRowSchema = z.object({ date: z.string() }).merge(MetricsSchema.partial());
 
 const ReportRowSchema = z.object({
   metadata: z.record(z.string(), z.unknown()),
   granularity: z.array(GranularityRowSchema).nullable().optional(),
   total: MetricsSchema.optional(),
-}).passthrough();
+});
 
 /** Returns the default date range: [today-30d, today] formatted as YYYY-MM-DD. */
 export function defaultDateRange(): { startDate: string; endDate: string } {
@@ -97,12 +112,10 @@ function parseReportResponse(raw: unknown): unknown {
             other: z.boolean().optional(),
             total: MetricsSchema.optional(),
           })
-          .passthrough()
           .nullable()
           .optional(),
-      }).passthrough(),
+      }),
     })
-    .passthrough()
     .parse(raw);
   return parsed;
 }
@@ -167,7 +180,7 @@ export function registerReportsTools(server: McpServer, client: AsaClient): void
 
   server.tool(
     "get_campaign_report",
-    "Fetch performance metrics (impressions, taps, installs, spend, CPA, CPT, TTR, conversion rate) for Apple Search Ads campaigns. Defaults to the last 30 days with weekly granularity.",
+    "Fetch performance metrics (impressions, taps, installs, localSpend, CPI, CPT, TTR, install rate, with tap-through and view-through breakdown) for Apple Search Ads campaigns. Defaults to the last 30 days with weekly granularity.",
     {
       startDate: z
         .string()

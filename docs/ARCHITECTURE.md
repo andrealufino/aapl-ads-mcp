@@ -134,7 +134,7 @@ All four report tools share a common implementation pattern defined in `src/tool
 
 ### Request shape
 
-Reports use `POST` (not `GET`) to the `/reports/<entity>` endpoints. The body follows the `ReportRequest` type:
+Reports use `POST` (not `GET`) to the `/reports/<entity>` endpoints. The `selector` field is **mandatory** in the body even when no conditions are needed — omitting it causes a 400 error. The body follows the `ReportRequest` type:
 
 ```json
 {
@@ -168,15 +168,38 @@ Reports use `POST` (not `GET`) to the `/reports/<entity>` endpoints. The body fo
 
 Throws with a descriptive message on violation; the MCP SDK surfaces this as a tool error.
 
+### Granularity row shape
+
+When `granularity` is set in the request, each row in `grandTotals[].granularity` contains metrics **flat** (not nested under a `metrics` key). For example:
+
+```json
+{
+  "date": "2024-04-01",
+  "impressions": 1200,
+  "taps": 45,
+  "localSpend": { "amount": "30.00", "currency": "USD" }
+}
+```
+
+This differs from some older ASA v3/v4 documentation that showed `{ "date": "...", "metrics": { ... } }`. The v5 flat shape must be reflected in `GranularityRowSchema`.
+
 ### Nullable-first schema design
 
 ASA report responses omit metric fields for periods with no activity. Every field in `MetricsSchema` and `GranularityRowSchema` is `.nullable().optional()`. `ReportRowSchema.granularity` is also `.nullable().optional()`. This prevents `zod` parse failures on sparse responses.
 
-### Standard metrics
+### Standard metrics (ASA v5, post-July 2024)
 
-`impressions`, `taps`, `installs`, `newDownloads`, `redownloads`, `latOnInstalls`, `latOffInstalls`, `ttr`, `avgCPT`, `avgCPA`, `spend`, `conversionRate`.
+> **Important**: ASA v5 changed metric field names in July 2024 with the addition of view-through reporting. The v2/v3 names (`installs`, `newDownloads`, `redownloads`, `latOnInstalls`, `latOffInstalls`, `avgCPA`, `spend`, `conversionRate`) no longer exist in API responses. Do **not** rely on pre-2024 ASA documentation.
 
-Money fields (`avgCPT`, `avgCPA`, `spend`) are `{ amount: string, currency: string } | null | undefined`.
+Engagement: `impressions`, `taps`, `ttr`.
+
+Money fields: `avgCPT`, `avgCPM`, `localSpend`, `tapInstallCPI`, `totalAvgCPI` — shape: `{ amount: string, currency: string } | null | undefined`.
+
+Installs (three variants each): `tapInstalls` / `viewInstalls` / `totalInstalls`, `tapNewDownloads` / `viewNewDownloads` / `totalNewDownloads`, `tapRedownloads` / `viewRedownloads` / `totalRedownloads`.
+
+Install rates: `tapInstallRate`, `totalInstallRate`.
+
+Pre-orders: `tapPreOrdersPlaced`, `viewPreOrdersPlaced`, `totalPreOrdersPlaced`.
 
 ### Filtering
 
@@ -187,7 +210,7 @@ Money fields (`avgCPT`, `avgCPA`, `spend`) are `{ amount: string, currency: stri
 
 ### groupBy
 
-All reports send `groupBy: ["countryOrRegion"]`. This is required for ASA to return the full set of metrics (`installs`, `spend`, `avgCPA`, `conversionRate`). Without it, some metric fields may be absent or null in the response.
+All reports send `groupBy: ["countryOrRegion"]`. This is required for ASA to return the full set of metrics. Without it, some metric fields may be absent or null in the response.
 
 ### API role and metric availability
 
