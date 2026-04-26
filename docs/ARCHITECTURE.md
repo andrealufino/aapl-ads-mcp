@@ -49,6 +49,91 @@ Tool inputs are validated with zod schemas defined inline per tool. Errors from 
 - API errors: `AsaClient` throws with HTTP status and response body for non-2xx responses
 - Tool handlers: let errors propagate — MCP SDK converts unhandled exceptions to error responses
 
-## Pagination
+## Tools & Pagination
 
-ASA API v5 uses offset-based pagination (`startIndex`, `itemsPerPage`). The MVP does not auto-paginate — it returns the first page (default 20 items). Future: add `limit`/`offset` tool args.
+### Pagination helper
+
+`AsaClient.getPaginated<T>(path, { limit?, offset? })` appends `limit` and `offset` query params to the path. Defaults: `limit=20`, `offset=0`. Uses `?` when no query string is present, `&` otherwise. All list tools expose `limit` and `offset` as optional input args and forward them directly to this helper.
+
+Response envelope:
+
+```json
+{
+  "pagination": { "totalResults": 250, "startIndex": 0, "itemsPerPage": 20 },
+  "campaigns": [ ... ]
+}
+```
+
+`pagination` is passed through from the ASA response as-is. If the API omits it (e.g. `list_orgs`), it is `undefined`.
+
+### Tool Registry
+
+| Tool | File | Endpoint | Auth required |
+|------|------|----------|---------------|
+| `health` | `tools/health.ts` | — | No |
+| `list_orgs` | `tools/orgs.ts` | `GET /acls` | Yes |
+| `list_campaigns` | `tools/campaigns.ts` | `GET /campaigns` | Yes |
+| `list_ad_groups` | `tools/ad-groups.ts` | `GET /campaigns/:id/adgroups` | Yes |
+| `list_keywords` | `tools/keywords.ts` | `GET /campaigns/:id/adgroups/:id/targetingkeywords` | Yes |
+
+### Zod schemas per tool
+
+Each tool file exports two schemas:
+
+- `List*InputSchema` — validates and applies defaults to tool arguments before use
+- `*OutputSchema` — strips/validates the ASA API response before returning to the caller
+
+Input schemas are defined twice: inline in `server.tool()` (required by the MCP SDK for JSON Schema generation) and as a standalone `z.object()` export (used in tests). Both must be kept in sync.
+
+`list_orgs` response shape (per org):
+
+```json
+{
+  "orgId": 12345,
+  "orgName": "Acme Inc.",
+  "currency": "USD",
+  "paymentModel": "PAYG",
+  "timeZone": "America/New_York",
+  "roleNames": ["API Account Manager"]
+}
+```
+
+`list_campaigns` response shape:
+
+```json
+{
+  "pagination": { "totalResults": 5, "startIndex": 0, "itemsPerPage": 20 },
+  "campaigns": [
+    {
+      "id": 1234567890,
+      "orgId": 9876543,
+      "name": "Brand — US",
+      "status": "ENABLED",
+      "servingStatus": "RUNNING",
+      "adamId": 123456789,
+      "budgetAmount": { "amount": "5000.00", "currency": "USD" },
+      "countriesOrRegions": ["US"],
+      "supplySources": ["APPSTORE_SEARCH_RESULTS"],
+      "adChannelType": "SEARCH",
+      "billingEvent": "TAPS",
+      "startTime": "2024-01-01T00:00:00.000Z",
+      "creationTime": "2024-01-01T00:00:00.000Z",
+      "modificationTime": "2024-06-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+## Testing Strategy
+
+Unit tests live in `tests/`. No integration tests against the live ASA API (Apple provides no sandbox).
+
+**`auth.test.ts`** covers:
+- JWT claims: `iss`, `sub`, `aud`, `kid`, `jti`, `iat`, `exp` (~180s lifetime)
+- Token exchange: correct `grant_type`, `client_id`, `scope` sent to Apple
+- Cache: hit returns same token without a second `fetch`
+- Cache: `invalidate()` forces re-fetch
+- Cache: expired token (past `expires_in - 30s`) triggers re-fetch
+- Error: non-2xx from Apple surfaces with HTTP status in message
+
+Tests use `vi.stubGlobal("fetch", ...)` — no real network calls.

@@ -69,11 +69,12 @@ export interface Keyword {
   id: number;
   adGroupId: number;
   campaignId: number;
-  orgId: number;
+  orgId?: number;
   text: string;
   status: KeywordStatus;
   matchType: KeywordMatchType;
   bidAmount: Money;
+  servingStatus?: string;
   creationTime: string;
   modificationTime: string;
 }
