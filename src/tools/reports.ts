@@ -24,20 +24,20 @@ const MetricsSchema = z.object({
   ttr: z.number().nullable().optional(),
   avgCPT: MoneySchema,
   avgCPA: MoneySchema,
-  spend: MoneySchema,
+  localSpend: MoneySchema,
   conversionRate: z.number().nullable().optional(),
-});
+}).passthrough();
 
 const GranularityRowSchema = z.object({
   date: z.string(),
   metrics: MetricsSchema.optional(),
-});
+}).passthrough();
 
 const ReportRowSchema = z.object({
   metadata: z.record(z.string(), z.unknown()),
   granularity: z.array(GranularityRowSchema).nullable().optional(),
   total: MetricsSchema.optional(),
-});
+}).passthrough();
 
 /** Returns the default date range: [today-30d, today] formatted as YYYY-MM-DD. */
 export function defaultDateRange(): { startDate: string; endDate: string } {
@@ -97,10 +97,12 @@ function parseReportResponse(raw: unknown): unknown {
             other: z.boolean().optional(),
             total: MetricsSchema.optional(),
           })
+          .passthrough()
           .nullable()
           .optional(),
-      }),
+      }).passthrough(),
     })
+    .passthrough()
     .parse(raw);
   return parsed;
 }

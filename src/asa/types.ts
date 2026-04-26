@@ -98,7 +98,7 @@ export interface ReportMetrics {
   ttr: number;
   avgCPT: Money;
   avgCPA: Money;
-  spend: Money;
+  localSpend: Money;
   conversionRate: number;
 }
 
