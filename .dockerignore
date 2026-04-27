@@ -1,0 +1,16 @@
+node_modules
+dist
+.env
+.env.*
+*.pem
+*.key
+.git
+.github
+coverage
+tests
+docs
+*.md
+.gitignore
+.gitleaks.toml
+lefthook.yml
+biome.json
