@@ -44,11 +44,12 @@ All tools default to the last 30 days. Reports support `HOURLY`, `DAILY`,
   release.
 - **Requires Apple Search Ads Campaign Management API access.** You need to
   create an API user in your ASA account and generate an ES256 key pair.
-- **Attribution metrics depend on AdServices.** `tapInstalls` and related
-  conversion fields are only populated if your app has
+- **Aggregate install metrics work without app-side integration.** `tapInstalls`,
+  `viewInstalls`, and related fields in ASA reports are populated by Apple Search
+  Ads directly and do not require any SDK in your app. AdServices /
   [AdAttributionKit](https://developer.apple.com/documentation/adattributionkit)
-  or SKAdNetwork integrated. Without it, install metrics will be null even for
-  active campaigns.
+  is only needed if you want to attribute installs to specific campaigns from
+  inside your app (e.g. for onboarding personalization).
 - **Single organization.** The org ID is fixed in the config. Multi-org
   switching is not implemented.
 
@@ -81,7 +82,7 @@ Store `private-key.pem` outside the repository root if possible (e.g.
 ### 2. Create an API user in Apple Search Ads
 
 1. Go to **ASA → Account Settings → User Management**
-2. Click **Create User**, choose role **API Account Manager** (needed for spend metrics)
+2. Click **Create User**, choose role **API Account Read Only** for read-only usage (recommended for this server). **API Campaign Manager** is also fine and adds write permissions if you plan to extend the server with write tools later.
 3. Go to the **API** tab, click **Create Client**
 4. Upload `public-key.pem`
 5. Copy `client_id`, `team_id`, and `key_id` from the confirmation screen
@@ -90,7 +91,7 @@ Store `private-key.pem` outside the repository root if possible (e.g.
 ### 3. Clone and build
 
 ```bash
-git clone https://github.com/andrea-lufino/aapl-ads-mcp.git
+git clone https://github.com/<your-username>/aapl-ads-mcp.git
 cd aapl-ads-mcp
 npm install
 npm run build

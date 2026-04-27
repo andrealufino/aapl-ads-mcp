@@ -4,7 +4,11 @@ Project reference: see `PLAN.md` (Italian, internal). Architecture reference: se
 
 ## Commands
 
-TaskCommandBuild`npm run build`Dev (watch)`npm run build && npm run dev`Test`npm test`Lint`npm run lint`Type check`npm run typecheck`
+- **Build**: `npm run build`
+- **Dev (watch)**: `npm run build && npm run dev`
+- **Test**: `npm test`
+- **Lint**: `npm run lint`
+- **Type check**: `npm run typecheck`
 
 Always run `npm run build` after code changes before testing.
 
