@@ -91,7 +91,7 @@ Store `private-key.pem` outside the repository root if possible (e.g.
 ### 3. Clone and build
 
 ```bash
-git clone https://github.com/<your-username>/aapl-ads-mcp.git
+git clone https://github.com/andrealufino/aapl-ads-mcp.git
 cd aapl-ads-mcp
 npm install
 npm run build
