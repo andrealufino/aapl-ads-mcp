@@ -40,27 +40,16 @@ All tools default to the last 30 days. Reports support `HOURLY`, `DAILY`,
 `WEEKLY`, and `MONTHLY` granularity.
 
 ## Limitations
-
-- **Read-only by design.** No write operations (create, update, pause) in this
-  release.
-- **Requires Apple Search Ads Campaign Management API access.** You need to
-  create an API user in your ASA account and generate an ES256 key pair.
-- **Aggregate install metrics work without app-side integration.** `tapInstalls`,
-  `viewInstalls`, and related fields in ASA reports are populated by Apple Search
-  Ads directly and do not require any SDK in your app. AdServices /
-  [AdAttributionKit](https://developer.apple.com/documentation/adattributionkit)
-  is only needed if you want to attribute installs to specific campaigns from
-  inside your app (e.g. for onboarding personalization).
-- **Single organization.** The org ID is fixed in the config. Multi-org
-  switching is not implemented.
+- **Read-only by design.** No write operations (create, update, pause) in this release.
+- **Requires Apple Search Ads Campaign Management API access.** You need to create an API user in your ASA account and generate an ES256 key pair.
+- **Aggregate install metrics work without app-side integration.** `tapInstalls`, `viewInstalls`, and related fields in ASA reports are populated by Apple Search Ads directly and do not require any SDK in your app. AdServices / [AdAttributionKit](https://developer.apple.com/documentation/adattributionkit)is only needed if you want to attribute installs to specific campaigns from inside your app (e.g. for onboarding personalization).
+- **Single organization.** The org ID is fixed in the config. Multi-org switching is not implemented.
 
 ## Setup
 
 ### 1. Generate an ES256 key pair
 
-Use the modern `genpkey` command — it produces PKCS#8 format directly, which
-is what this server requires. The older `ecparam -genkey` produces SEC1 format
-and will cause a startup error.
+Use the modern `genpkey` command — it produces PKCS#8 format directly, which is what this server requires. The older `ecparam -genkey` produces SEC1 format and will cause a startup error.
 
 ```bash
 # Generate private key (PKCS#8)
@@ -70,15 +59,13 @@ openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out private-key.
 openssl pkey -in private-key.pem -pubout -out public-key.pem
 ```
 
-Verify the private key starts with `-----BEGIN PRIVATE KEY-----` (not
-`-----BEGIN EC PRIVATE KEY-----`). If it starts with the EC variant, convert it:
+Verify the private key starts with `-----BEGIN PRIVATE KEY-----` (not `-----BEGIN EC PRIVATE KEY-----`). If it starts with the EC variant, convert it:
 
 ```bash
 openssl pkcs8 -topk8 -nocrypt -in ec-key.pem -out private-key.pem
 ```
 
-Store `private-key.pem` outside the repository root if possible (e.g.
-`~/.ssh/asa-private-key.pem`).
+Store `private-key.pem` outside the repository root if possible (e.g. `~/.ssh/asa-private-key.pem`).
 
 ### 2. Create an API user in Apple Search Ads
 
@@ -99,7 +86,6 @@ npm run build
 ```
 
 ### 4. Configure Claude Desktop
-
 Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
@@ -110,18 +96,25 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
       "args": ["/absolute/path/to/aapl-ads-mcp/dist/index.js"],
       "env": {
         "ASA_CLIENT_ID": "SEARCHADS.your-client-id-here",
-        "ASA_TEAM_ID": "SEARCHADS.your-team-id-here",
-        "ASA_KEY_ID": "your-key-id-here",
-        "ASA_ORG_ID": "12345678",
-        "ASA_PRIVATE_KEY_PATH": "/absolute/path/to/private-key.pem"
-      }
-    }
+```
+    "ASA_TEAM_ID": "SEARCHADS.your-team-id-here",
+    "ASA_KEY_ID": "your-key-id-here",
+    "ASA_ORG_ID": "12345678",
+    "ASA_PRIVATE_KEY_PATH": "/absolute/path/to/private-key.pem"
   }
 }
 ```
 
+} }
+
+```
+
 **Note:** `ASA_PRIVATE_KEY_PATH` must be an absolute path. Tilde (`~`) is not
 expanded by Node.js — use the full path.
+
+For container or cloud deployments where mounting a file is impractical, set
+`ASA_PRIVATE_KEY` to the inline PEM contents instead (newlines preserved). If
+both are set, `ASA_PRIVATE_KEY` wins.
 
 Restart Claude Desktop. Ask "run health check" to verify the server is
 connected.
@@ -130,11 +123,12 @@ connected.
 
 These are natural-language prompts that work with Claude Desktop once the server
 is running:
-
 ```
+
 List my Apple Ads campaigns
-```
 
+```
+```
 ```
 Show me the last 30 days of campaign performance
 ```
