@@ -1,52 +1,102 @@
 # aapl-ads-mcp
 
-MCP server for [Apple Search Ads API v5](https://developer.apple.com/documentation/apple_search_ads). Lets Claude and other MCP clients query your ASA campaigns, ad groups, keywords, and performance reports.
+An MCP server that connects Claude (and any MCP-compatible client) to
+[Apple Search Ads API v5](https://developer.apple.com/documentation/apple_search_ads).
 
-Read-only. Stdio transport. No external databases.
+![Node version](https://img.shields.io/badge/node-%3E%3D20-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-## Requirements
+## What is this
 
-- Node.js 20+
-- An Apple Search Ads account with API access
+MCP (Model Context Protocol) is an open standard that lets AI assistants call
+external tools. This server implements the MCP stdio transport and exposes 9
+read-only tools that query your Apple Search Ads account — campaigns, ad groups,
+keywords, and performance reports.
+
+You install it once, point Claude Desktop at it, and then ask questions in plain
+English: "Which keywords drove the most installs last month?" or "Show me
+campaigns with zero impressions this week."
+
+## Why
+
+The official ASA dashboards are good for humans but not for ad-hoc analysis or
+automated reporting. Existing MCP alternatives are either SaaS (you hand over
+your keys) or unmaintained. This is a self-hosted, open-source option you
+control.
+
+## Features
+
+- **list_orgs** — verify authentication, list accessible organizations
+- **list_campaigns** — enumerate campaigns, optionally filter by status
+- **list_ad_groups** — ad groups for a given campaign
+- **list_keywords** — targeting keywords with bid amounts and match type
+- **get_campaign_report** — impressions, taps, installs, spend, CPI, TTR by campaign
+- **get_ad_group_report** — same metrics broken down by ad group
+- **get_keyword_report** — per-keyword performance with weekly/daily/monthly granularity
+- **get_search_terms_report** — the real search queries that triggered your ads (most useful for discovery)
+
+All tools default to the last 30 days. Reports support `HOURLY`, `DAILY`,
+`WEEKLY`, and `MONTHLY` granularity.
+
+## Limitations
+
+- **Read-only by design.** No write operations (create, update, pause) in this
+  release.
+- **Requires Apple Search Ads Campaign Management API access.** You need to
+  create an API user in your ASA account and generate an ES256 key pair.
+- **Attribution metrics depend on AdServices.** `tapInstalls` and related
+  conversion fields are only populated if your app has
+  [AdAttributionKit](https://developer.apple.com/documentation/adattributionkit)
+  or SKAdNetwork integrated. Without it, install metrics will be null even for
+  active campaigns.
+- **Single organization.** The org ID is fixed in the config. Multi-org
+  switching is not implemented.
 
 ## Setup
 
-### 1. Create an API key in Apple Search Ads
+### 1. Generate an ES256 key pair
 
-1. Go to **ASA → Account Settings → User Management → API**
-2. Create a user with **Read Only** role
-3. Generate an ES256 key pair:
-   ```bash
-   openssl ecparam -genkey -name prime256v1 -noout -out private-key.pem
-   openssl ec -in private-key.pem -pubout -out public-key.pem
-   ```
-4. Upload `public-key.pem` to ASA
-5. Note your `client_id`, `team_id`, `key_id`, and `org_id`
-
-### 2. Configure environment
+Use the modern `genpkey` command — it produces PKCS#8 format directly, which
+is what this server requires. The older `ecparam -genkey` produces SEC1 format
+and will cause a startup error.
 
 ```bash
-cp .env.example .env
+# Generate private key (PKCS#8)
+openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out private-key.pem
+
+# Derive public key
+openssl pkey -in private-key.pem -pubout -out public-key.pem
 ```
 
-Fill in `.env`:
-
-```
-ASA_CLIENT_ID=SEARCHADS.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-ASA_TEAM_ID=SEARCHADS.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-ASA_KEY_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-ASA_ORG_ID=12345678
-ASA_PRIVATE_KEY_PATH=/path/to/private-key.pem
-```
-
-### 3. Build
+Verify the private key starts with `-----BEGIN PRIVATE KEY-----` (not
+`-----BEGIN EC PRIVATE KEY-----`). If it starts with the EC variant, convert it:
 
 ```bash
+openssl pkcs8 -topk8 -nocrypt -in ec-key.pem -out private-key.pem
+```
+
+Store `private-key.pem` outside the repository root if possible (e.g.
+`~/.ssh/asa-private-key.pem`).
+
+### 2. Create an API user in Apple Search Ads
+
+1. Go to **ASA → Account Settings → User Management**
+2. Click **Create User**, choose role **API Account Manager** (needed for spend metrics)
+3. Go to the **API** tab, click **Create Client**
+4. Upload `public-key.pem`
+5. Copy `client_id`, `team_id`, and `key_id` from the confirmation screen
+6. Find your `org_id` in **Account Settings → Overview**
+
+### 3. Clone and build
+
+```bash
+git clone https://github.com/andrea-lufino/aapl-ads-mcp.git
+cd aapl-ads-mcp
 npm install
 npm run build
 ```
 
-### 4. Add to Claude Desktop
+### 4. Configure Claude Desktop
 
 Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
@@ -57,9 +107,9 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
       "command": "node",
       "args": ["/absolute/path/to/aapl-ads-mcp/dist/index.js"],
       "env": {
-        "ASA_CLIENT_ID": "SEARCHADS.xxx",
-        "ASA_TEAM_ID": "SEARCHADS.xxx",
-        "ASA_KEY_ID": "xxx",
+        "ASA_CLIENT_ID": "SEARCHADS.your-client-id-here",
+        "ASA_TEAM_ID": "SEARCHADS.your-team-id-here",
+        "ASA_KEY_ID": "your-key-id-here",
         "ASA_ORG_ID": "12345678",
         "ASA_PRIVATE_KEY_PATH": "/absolute/path/to/private-key.pem"
       }
@@ -68,32 +118,90 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-Restart Claude Desktop. The `health` tool should appear.
+**Note:** `ASA_PRIVATE_KEY_PATH` must be an absolute path. Tilde (`~`) is not
+expanded by Node.js — use the full path.
 
-## Available Tools
+Restart Claude Desktop. Ask "run health check" to verify the server is
+connected.
 
-| Tool | Description |
-|------|-------------|
-| `health` | Verify the server is running |
-| `list_orgs` | List accessible organizations |
-| `list_campaigns` | List campaigns (filter by status) |
-| `list_ad_groups` | List ad groups for a campaign |
-| `list_keywords` | List keywords for an ad group |
-| `get_campaign_report` | Performance metrics by campaign |
-| `get_ad_group_report` | Performance metrics by ad group |
-| `get_keyword_report` | Performance metrics by keyword |
-| `get_search_terms_report` | Real search terms that triggered ads |
+## Usage examples
 
-> Tools beyond `health` are available from Phase 1 onward.
+These are natural-language prompts that work with Claude Desktop once the server
+is running:
+
+```
+List my Apple Ads campaigns
+```
+
+```
+Show me the last 30 days of campaign performance
+```
+
+```
+Which keywords drove installs in my Brand campaign last week?
+```
+
+```
+What search terms triggered my ads in the past month? Focus on ones
+with impressions but no installs.
+```
+
+```
+Compare weekly spend across all campaigns for Q1 2025
+```
+
+```
+Show ad groups in campaign 1234567890 with their bid amounts
+```
+
+## Development
+
+```bash
+npm run build      # compile TypeScript
+npm test           # run test suite (Vitest)
+npm run typecheck  # type-check without emitting
+npm run lint       # Biome lint
+npm run format     # Biome format (write)
+```
+
+### MCP Inspector
+
+To debug tool calls interactively without Claude Desktop:
+
+```bash
+npx @modelcontextprotocol/inspector node dist/index.js
+```
+
+Set the env vars in the Inspector UI before connecting.
+
+### Pre-commit hooks
+
+Install lefthook hooks locally after cloning:
+
+```bash
+npx lefthook install
+```
+
+This sets up:
+- `gitleaks protect --staged` — blocks commits that contain secrets
+- Biome lint check on staged `.ts` files
+- TypeScript type check
+
+## Contributing
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for technical details: auth
+flow, HTTP client design, tool pattern, report schema quirks, and ASA v5
+lessons learned during development.
+
+Bug reports and pull requests welcome.
 
 ## Security
 
-**Never commit `.env` or `.pem` files.** Both are in `.gitignore` by default.
-
-Keep your `private-key.pem` outside the repository root if possible. The access token fetched at runtime is held in memory only — never written to disk.
-
-If you suspect a key has been exposed, rotate it immediately in ASA → Account Settings → API.
+- Never commit `.env` or `*.pem` files — both are in `.gitignore`
+- Keep `private-key.pem` outside the repository root
+- The access token is held in memory only, never written to disk
+- If you suspect a key has been exposed, rotate it in **ASA → Account Settings → API**
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
