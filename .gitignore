@@ -31,3 +31,6 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+
+# Internal planning docs
+PLAN.md

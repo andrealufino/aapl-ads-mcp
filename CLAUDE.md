@@ -1,6 +1,6 @@
 # aapl-ads-mcp — Claude Code Guide
 
-Project reference: see `PLAN.md` (Italian, internal). Architecture reference: see `docs/ARCHITECTURE.md`.
+Architecture reference: see `docs/ARCHITECTURE.md`.
 
 ## Commands
 
