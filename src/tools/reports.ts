@@ -180,20 +180,25 @@ export function registerReportsTools(server: McpServer, client: AsaClient): void
 
   server.tool(
     "get_campaign_report",
-    "Fetch performance metrics (impressions, taps, installs, localSpend, CPI, CPT, TTR, install rate, with tap-through and view-through breakdown) for Apple Search Ads campaigns. Defaults to the last 30 days with weekly granularity.",
+    "Fetch performance metrics for Apple Search Ads campaigns: impressions, taps, tap-through rate (TTR), localSpend, avgCPT, avgCPM, tapInstalls, viewInstalls, totalInstalls, new downloads, redownloads, CPI, and install rate. Requires ASA authentication; read-only. Use get_ad_group_report or get_keyword_report for deeper breakdowns. Results are grouped by country/region and include grand totals. Defaults to the last 30 days with WEEKLY granularity.",
     {
       startDate: z
         .string()
         .optional()
-        .describe("Start date (YYYY-MM-DD). Defaults to 30 days ago."),
-      endDate: z.string().optional().describe("End date (YYYY-MM-DD). Defaults to today."),
+        .describe("Start of the reporting period (YYYY-MM-DD). Defaults to 30 days ago."),
+      endDate: z
+        .string()
+        .optional()
+        .describe("End of the reporting period (YYYY-MM-DD). Defaults to today."),
       granularity: GranularityEnum.optional().describe(
-        "Time granularity: HOURLY, DAILY, WEEKLY, MONTHLY. Default: WEEKLY."
+        "Time granularity for the breakdown rows: HOURLY, DAILY, WEEKLY, or MONTHLY. Defaults to WEEKLY."
       ),
       campaignIds: z
         .array(z.number().int().positive())
         .optional()
-        .describe("Filter to specific campaign IDs. Omit for all campaigns."),
+        .describe(
+          "Restrict results to these campaign IDs. Omit to include all campaigns in the org."
+        ),
     },
     async (args) => {
       const input = GetCampaignReportInputSchema.parse(args);
@@ -230,21 +235,30 @@ export function registerReportsTools(server: McpServer, client: AsaClient): void
 
   server.tool(
     "get_ad_group_report",
-    "Fetch performance metrics for Apple Search Ads ad groups within a campaign. Defaults to the last 30 days with weekly granularity.",
+    "Fetch performance metrics for ad groups within a specific Apple Search Ads campaign: impressions, taps, TTR, spend, CPI, installs (tap-through and view-through), and install rate. Requires ASA authentication; read-only. Use get_campaign_report for a campaign-level summary, or get_keyword_report for keyword-level detail. Results are grouped by country/region and include grand totals. Defaults to the last 30 days with WEEKLY granularity.",
     {
       startDate: z
         .string()
         .optional()
-        .describe("Start date (YYYY-MM-DD). Defaults to 30 days ago."),
-      endDate: z.string().optional().describe("End date (YYYY-MM-DD). Defaults to today."),
+        .describe("Start of the reporting period (YYYY-MM-DD). Defaults to 30 days ago."),
+      endDate: z
+        .string()
+        .optional()
+        .describe("End of the reporting period (YYYY-MM-DD). Defaults to today."),
       granularity: GranularityEnum.optional().describe(
-        "Time granularity: HOURLY, DAILY, WEEKLY, MONTHLY. Default: WEEKLY."
+        "Time granularity for the breakdown rows: HOURLY, DAILY, WEEKLY, or MONTHLY. Defaults to WEEKLY."
       ),
-      campaignId: z.number().int().positive().describe("Campaign ID to report on."),
+      campaignId: z
+        .number()
+        .int()
+        .positive()
+        .describe("ID of the campaign to report on. Obtain from list_campaigns."),
       adGroupIds: z
         .array(z.number().int().positive())
         .optional()
-        .describe("Filter to specific ad group IDs. Omit for all ad groups in the campaign."),
+        .describe(
+          "Restrict results to these ad group IDs. Omit to include all ad groups in the campaign."
+        ),
     },
     async (args) => {
       const input = GetAdGroupReportInputSchema.parse(args);
@@ -284,18 +298,29 @@ export function registerReportsTools(server: McpServer, client: AsaClient): void
 
   server.tool(
     "get_keyword_report",
-    "Fetch performance metrics for targeting keywords in an Apple Search Ads ad group. Defaults to the last 30 days with weekly granularity.",
+    "Fetch performance metrics for targeting keywords in a specific Apple Search Ads ad group: impressions, taps, TTR, spend, CPI, installs, and install rate broken down per keyword. Requires ASA authentication; read-only. Use get_search_terms_report to see the actual user queries that triggered these keywords. Results are grouped by country/region and include grand totals. Defaults to the last 30 days with WEEKLY granularity.",
     {
       startDate: z
         .string()
         .optional()
-        .describe("Start date (YYYY-MM-DD). Defaults to 30 days ago."),
-      endDate: z.string().optional().describe("End date (YYYY-MM-DD). Defaults to today."),
+        .describe("Start of the reporting period (YYYY-MM-DD). Defaults to 30 days ago."),
+      endDate: z
+        .string()
+        .optional()
+        .describe("End of the reporting period (YYYY-MM-DD). Defaults to today."),
       granularity: GranularityEnum.optional().describe(
-        "Time granularity: HOURLY, DAILY, WEEKLY, MONTHLY. Default: WEEKLY."
+        "Time granularity for the breakdown rows: HOURLY, DAILY, WEEKLY, or MONTHLY. Defaults to WEEKLY."
       ),
-      campaignId: z.number().int().positive().describe("Campaign ID."),
-      adGroupId: z.number().int().positive().describe("Ad group ID."),
+      campaignId: z
+        .number()
+        .int()
+        .positive()
+        .describe("ID of the campaign containing the ad group. Obtain from list_campaigns."),
+      adGroupId: z
+        .number()
+        .int()
+        .positive()
+        .describe("ID of the ad group to report on. Obtain from list_ad_groups."),
     },
     async (args) => {
       const input = GetKeywordReportInputSchema.parse(args);
@@ -335,18 +360,29 @@ export function registerReportsTools(server: McpServer, client: AsaClient): void
 
   server.tool(
     "get_search_terms_report",
-    "Fetch the real search terms that triggered Apple Search Ads, along with performance metrics. Most valuable for discovering new keywords to add or negate. Defaults to the last 30 days with weekly granularity.",
+    "Fetch the actual user search queries that triggered Apple Search Ads impressions, along with performance metrics per search term. Requires ASA authentication; read-only. Most useful for keyword discovery (finding new terms to add) and negation (finding irrelevant queries to exclude). Does not support granularity breakdown — returns aggregate totals per search term. Use get_keyword_report to see metrics for your configured targeting keywords instead. Defaults to the last 30 days.",
     {
       startDate: z
         .string()
         .optional()
-        .describe("Start date (YYYY-MM-DD). Defaults to 30 days ago."),
-      endDate: z.string().optional().describe("End date (YYYY-MM-DD). Defaults to today."),
+        .describe("Start of the reporting period (YYYY-MM-DD). Defaults to 30 days ago."),
+      endDate: z
+        .string()
+        .optional()
+        .describe("End of the reporting period (YYYY-MM-DD). Defaults to today."),
       granularity: GranularityEnum.optional().describe(
-        "Time granularity: HOURLY, DAILY, WEEKLY, MONTHLY. Default: WEEKLY."
+        "Ignored for this report — the ASA API does not support granularity on search terms reports."
       ),
-      campaignId: z.number().int().positive().describe("Campaign ID."),
-      adGroupId: z.number().int().positive().describe("Ad group ID."),
+      campaignId: z
+        .number()
+        .int()
+        .positive()
+        .describe("ID of the campaign containing the ad group. Obtain from list_campaigns."),
+      adGroupId: z
+        .number()
+        .int()
+        .positive()
+        .describe("ID of the ad group to report on. Obtain from list_ad_groups."),
     },
     async (args) => {
       const input = GetSearchTermsReportInputSchema.parse(args);

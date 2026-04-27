@@ -46,23 +46,31 @@ export type KeywordOutput = z.infer<typeof KeywordOutputSchema>;
 export function registerKeywordsTools(server: McpServer, client: AsaClient): void {
   server.tool(
     "list_keywords",
-    "List targeting keywords for a given Apple Search Ads ad group.",
+    "List targeting keywords for a specific Apple Search Ads ad group. Requires ASA authentication; read-only. Returns keyword metadata (text, match type BROAD/EXACT, bid amount, status) but not performance metrics — use get_keyword_report for metrics. Supports pagination via limit/offset; default limit 20, max 1000.",
     {
-      campaignId: z.number().int().positive().describe("Campaign ID"),
-      adGroupId: z.number().int().positive().describe("Ad group ID to list keywords for"),
+      campaignId: z
+        .number()
+        .int()
+        .positive()
+        .describe("ID of the campaign that contains the ad group. Obtain from list_campaigns."),
+      adGroupId: z
+        .number()
+        .int()
+        .positive()
+        .describe("ID of the ad group whose keywords to list. Obtain from list_ad_groups."),
       limit: z
         .number()
         .int()
         .min(1)
         .max(1000)
         .optional()
-        .describe("Max results to return (1–1000, default 20)"),
+        .describe("Max keywords to return (1–1000). Defaults to 20."),
       offset: z
         .number()
         .int()
         .min(0)
         .optional()
-        .describe("Zero-based offset for pagination (default 0)"),
+        .describe("Zero-based page offset for pagination. Defaults to 0."),
     },
     async (args) => {
       const { campaignId, adGroupId, limit, offset } = ListKeywordsInputSchema.parse(args);

@@ -6,7 +6,7 @@ import type { Organization } from "../asa/types.js";
 export function registerOrgsTools(server: McpServer, client: AsaClient): void {
   server.tool(
     "list_orgs",
-    "List all Apple Search Ads organizations accessible with the configured credentials. Use this as a sanity check for authentication.",
+    "List all Apple Search Ads organizations accessible with the configured credentials. Requires ASA authentication. Use this to verify credentials are valid and to discover available org IDs before calling other tools. Returns org ID, name, currency, timezone, payment model, and assigned role names.",
     {},
     async () => {
       const response = await client.get<Organization[]>("/acls");

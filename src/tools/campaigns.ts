@@ -50,25 +50,25 @@ export type CampaignOutput = z.infer<typeof CampaignOutputSchema>;
 export function registerCampaignsTools(server: McpServer, client: AsaClient): void {
   server.tool(
     "list_campaigns",
-    "List Apple Search Ads campaigns for the configured organization. Optionally filter by status.",
+    "List all campaigns in the configured Apple Search Ads organization. Requires ASA authentication; read-only. Returns campaign metadata (id, name, status, budget, country, channel type) but not performance metrics — use get_campaign_report for metrics. Optionally filter by status. Supports pagination via limit/offset; default limit 20, max 1000.",
     {
       status: z
         .enum(["ENABLED", "PAUSED", "DELETED"])
         .optional()
-        .describe("Filter by campaign status"),
+        .describe("Filter results to campaigns with this status. Omit to return all statuses."),
       limit: z
         .number()
         .int()
         .min(1)
         .max(1000)
         .optional()
-        .describe("Max results to return (1–1000, default 20)"),
+        .describe("Max campaigns to return (1–1000). Defaults to 20."),
       offset: z
         .number()
         .int()
         .min(0)
         .optional()
-        .describe("Zero-based offset for pagination (default 0)"),
+        .describe("Zero-based page offset for pagination. Defaults to 0."),
     },
     async (args) => {
       const { status, limit, offset } = ListCampaignsInputSchema.parse(args);

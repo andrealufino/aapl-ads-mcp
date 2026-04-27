@@ -46,22 +46,26 @@ export type AdGroupOutput = z.infer<typeof AdGroupOutputSchema>;
 export function registerAdGroupsTools(server: McpServer, client: AsaClient): void {
   server.tool(
     "list_ad_groups",
-    "List ad groups for a given Apple Search Ads campaign.",
+    "List ad groups within a specific Apple Search Ads campaign. Requires ASA authentication; read-only. Returns ad group metadata (id, name, status, default bid, automated keyword opt-in) but not performance metrics — use get_ad_group_report for metrics. Supports pagination via limit/offset; default limit 20, max 1000.",
     {
-      campaignId: z.number().int().positive().describe("Campaign ID to list ad groups for"),
+      campaignId: z
+        .number()
+        .int()
+        .positive()
+        .describe("ID of the campaign whose ad groups to list. Obtain from list_campaigns."),
       limit: z
         .number()
         .int()
         .min(1)
         .max(1000)
         .optional()
-        .describe("Max results to return (1–1000, default 20)"),
+        .describe("Max ad groups to return (1–1000). Defaults to 20."),
       offset: z
         .number()
         .int()
         .min(0)
         .optional()
-        .describe("Zero-based offset for pagination (default 0)"),
+        .describe("Zero-based page offset for pagination. Defaults to 0."),
     },
     async (args) => {
       const { campaignId, limit, offset } = ListAdGroupsInputSchema.parse(args);
