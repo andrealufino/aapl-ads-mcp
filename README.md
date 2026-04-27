@@ -93,9 +93,12 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "aapl-ads": {
       "command": "node",
-      "args": ["/absolute/path/to/aapl-ads-mcp/dist/index.js"],
-      "env": {
-        "ASA_CLIENT_ID": "SEARCHADS.your-client-id-here",
+```
+  "args": ["/absolute/path/to/aapl-ads-mcp/dist/index.js"],
+  "env": {
+    "ASA_CLIENT_ID": "SEARCHADS.your-client-id-here",
+```
+
 ```
     "ASA_TEAM_ID": "SEARCHADS.your-team-id-here",
     "ASA_KEY_ID": "your-key-id-here",
@@ -103,6 +106,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
     "ASA_PRIVATE_KEY_PATH": "/absolute/path/to/private-key.pem"
   }
 }
+```
 ```
 
 } }
