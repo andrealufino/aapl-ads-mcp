@@ -1,7 +1,7 @@
 pre-commit:
   commands:
     gitleaks:
-      run: gitleaks protect --staged --redact
+      run: gitleaks protect --staged --verbose --redact
     biome-check:
       glob: "src/**/*.ts"
       run: npx biome check --no-errors-on-unmatched {staged_files}

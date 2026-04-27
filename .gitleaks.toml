@@ -1,0 +1,10 @@
+# gitleaks configuration for aapl-ads-mcp
+# Uses the default gitleaks ruleset. Allowlisted paths contain only fake
+# placeholders that are intentionally visible to guide setup.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = ".env.example contains intentionally fake placeholder values"
+paths = [".env.example"]
