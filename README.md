@@ -1,12 +1,11 @@
 # aapl-ads-mcp
 
-[![andrealufino/aapl-ads-mcp MCP server](https://glama.ai/mcp/servers/andrealufino/aapl-ads-mcp/badges/score.svg)](https://glama.ai/mcp/servers/andrealufino/aapl-ads-mcp) 
+[![Node version](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![andrealufino/aapl-ads-mcp MCP server](https://glama.ai/mcp/servers/andrealufino/aapl-ads-mcp/badges/score.svg)](https://glama.ai/mcp/servers/andrealufino/aapl-ads-mcp)
 
 An MCP server that connects Claude (and any MCP-compatible client) to
 [Apple Search Ads API v5](https://developer.apple.com/documentation/apple_search_ads).
-
-![Node version](https://img.shields.io/badge/node-%3E%3D20-brightgreen)
-![License](https://img.shields.io/badge/license-MIT-blue)
 
 ## What is this
 
