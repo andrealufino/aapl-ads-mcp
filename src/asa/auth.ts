@@ -65,7 +65,18 @@ export class AsaAuth {
   }
 
   private async buildClientAssertion(): Promise<string> {
-    const privateKey = await importPKCS8(this.config.privateKeyPem, "ES256");
+    let privateKey: Awaited<ReturnType<typeof importPKCS8>>;
+    try {
+      privateKey = await importPKCS8(this.config.privateKeyPem, "ES256");
+    } catch (cause) {
+      throw new Error(
+        "Failed to import private key. Ensure ASA_PRIVATE_KEY_PATH points to a PKCS#8 PEM file " +
+          "(-----BEGIN PRIVATE KEY-----). " +
+          "Do not use SEC1 format (-----BEGIN EC PRIVATE KEY-----) — convert with: " +
+          "openssl pkcs8 -topk8 -nocrypt -in ec-key.pem -out private-key.pem",
+        { cause }
+      );
+    }
 
     return new SignJWT({})
       .setProtectedHeader({ alg: "ES256", kid: this.config.keyId })

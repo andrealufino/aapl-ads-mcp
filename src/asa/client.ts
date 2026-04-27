@@ -65,8 +65,26 @@ export class AsaClient {
       return this.request<T>(method, path, body, true);
     }
 
+    if (response.status === 401 && isRetry) {
+      throw new Error(
+        "ASA API authentication failed after token refresh. Check your client_id, key_id, and private key."
+      );
+    }
+
+    if (response.status === 403) {
+      throw new Error(
+        "ASA API access denied (403). Verify the API user role in ASA → Account Settings → User Management."
+      );
+    }
+
+    if (response.status === 404) {
+      throw new Error(
+        `ASA API resource not found (404) at ${path}. Check the IDs in your request.`
+      );
+    }
+
     if (response.status === 429) {
-      throw new Error("ASA API rate limit exceeded. Please wait before retrying.");
+      throw new Error("ASA API rate limit exceeded (429). Please wait before retrying.");
     }
 
     if (response.status >= 500) {
@@ -74,8 +92,10 @@ export class AsaClient {
     }
 
     if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`ASA API error (${response.status}): ${text}`);
+      // Read and sanitize the error body — truncate to avoid leaking large payloads
+      const text = await response.text().catch(() => "(unreadable)");
+      const safe = text.length > 300 ? `${text.slice(0, 300)}…` : text;
+      throw new Error(`ASA API error (${response.status}): ${safe}`);
     }
 
     return response.json() as Promise<AsaApiResponse<T>>;
